@@ -64,3 +64,16 @@ All are dev-only (not in the app bundle), widely used, actively released, MIT li
 - Lint runs with `--max-warnings 0`; `no-explicit-any`, `ban-ts-comment` and `no-console` (except warn/error) are errors.
 - `CLAUDE.md` is excluded from Prettier so it is never reformatted without the owner's approval.
 - Line endings are LF in the repository (`.gitattributes`).
+
+## 2026-10-19 · Secret scanner: gitleaks 8.30.1 + Husky pre-commit hook (step 0.4)
+
+- **Scanner:** gitleaks 8.30.1 (MIT, latest stable; security fixes only). Betterleaks was re-checked: its v2 is still a pre-release (`v2.0.0-rc.2`, 2026-10-07), so it is not used yet. Re-check when Betterleaks v2 is stable.
+- **Install on Windows:** `winget install Gitleaks.Gitleaks`. CI will install it separately (step 0.6).
+- **Hook:** `husky` 9 (MIT, widely used) installs `.husky/pre-commit` through the `prepare` script on every `npm install`, so a fresh clone is protected. The hook is fail-closed: if `gitleaks` is not on `PATH`, the commit is blocked.
+- **Scripts:** `secrets:scan` (staged changes, `--redact`), `secrets:scan:history` (whole history, `--redact`).
+- **Verified on 2026-10-19:** a commit containing a randomly generated fake GitHub token was blocked; the hook also blocks when the scanner is missing; the full history scan found no leaks. The fake value was never committed.
+
+## 2026-10-19 · Runtime `npm audit --omit=dev` (step 0.4)
+
+- 61 entries from 5 root advisories, all transitive. Only `decode-uri-component` 0.2.2 (GHSA-vcc3-ghjq-m6fr, via `expo-router` → `query-string` 7) is part of the app bundle; the others (`braces`, `node-forge`, `sprintf-js`, `uuid`) are in Expo / Metro / Jest build tooling.
+- No compatible fix: patched versions are ESM-only and do not work with `query-string` 7; `npm audit fix --force` would downgrade Expo to SDK 44. Revisit at every Expo SDK update (including the proposed SDK 58 upgrade).

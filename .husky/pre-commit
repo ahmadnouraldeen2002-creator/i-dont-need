@@ -1,0 +1,9 @@
+# Secret scan of the staged changes (CLAUDE.md S28).
+# Fail-closed: if the scanner is missing, the commit is blocked.
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: gitleaks was not found, so the commit is blocked (CLAUDE.md S28)." >&2
+  echo "Install gitleaks (winget install Gitleaks.Gitleaks), then open a new terminal." >&2
+  exit 1
+fi
+
+npm run --silent secrets:scan
