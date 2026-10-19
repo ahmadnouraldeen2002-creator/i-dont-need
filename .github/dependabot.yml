@@ -1,0 +1,28 @@
+# Dependabot version updates (CLAUDE.md S30). Security updates are turned on in the repository settings.
+# Dependabot reads this file from the default branch (main), so it takes effect once M0 is merged.
+# No `ignore` rules: they would also block security updates. Nothing is merged without the owner's approval.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Wait 7 days after a release before proposing it (version updates only, not security updates).
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    groups:
+      npm-dependencies:
+        patterns:
+          - '*'
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      github-actions:
+        patterns:
+          - '*'

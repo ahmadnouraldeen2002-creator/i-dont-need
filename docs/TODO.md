@@ -10,13 +10,18 @@ Open items that are not yet a scheduled step. Every `TODO` comment in the code m
 
 ## M0
 
-- [ ] Step 0.6: add the CI checks as required status checks in ruleset `protect-main` (already approved by the owner).
-- [ ] Step 0.6: review the dev-only `npm audit` findings.
-- [ ] Owner decision pending: CLAUDE.md wording "anon key" → "publishable key" (see `docs/DECISIONS.md`).
+- [ ] After the first green CI run of step 0.6: make the jobs `check` and `secrets` required status checks in ruleset `protect-main` (approved by the owner).
+- [ ] Step 0.8: detailed rejection message on the owner's computer only (file, line and rule; the secret itself stays `REDACTED`). The CI secret scan stays minimal because its logs are public. Owner's decision, 2026-10-19.
+- [ ] After the M0 merge into `main`: check that Dependabot alerts, security updates and version updates are active (Dependabot reads only the default branch).
+
+## Before M9
+
+- [ ] **Raise the CI audit gate** from `--audit-level=critical` to `--audit-level=high`, with every remaining accepted finding listed as a documented exception (advisory ID, path, why it is not exploitable here, review date) in `docs/DECISIONS.md`. Until then the gate stays at critical. Owner's request, 2026-10-19.
 
 ## Later
 
 - [ ] Re-run `npm audit --omit=dev` at every Expo SDK update.
+- [ ] Remove the `test-renderer` ~1.2.0 pin when Expo moves to React 19.3 or later.
 - [ ] Re-check Betterleaks when its v2 is stable (it was `v2.0.0-rc.2` on 2026-10-19).
 - [ ] M1: replace the placeholder screen `app/index.tsx` and its hard-coded `APP_NAME` text with the real shell and i18n strings.
 - [ ] Before the first store upload: final app name and Android package ID / iOS bundle ID (`app.config.ts`).

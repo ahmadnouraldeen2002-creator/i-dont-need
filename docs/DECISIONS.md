@@ -92,3 +92,33 @@ All are dev-only (not in the app bundle), widely used, actively released, MIT li
 ## 2026-10-19 · Expo Go for SDK 58 (update to the SDK 57 decision)
 
 - Expo announced that the next Expo Go in the stores will support only SDK 58. When it reaches the Play Store, it will no longer open this SDK 57 project. Until the upgrade, the owner installs the Expo Go build for SDK 57 from expo.dev/go. Tracked in `docs/TODO.md`.
+
+## 2026-10-19 · CLAUDE.md updated to version 1.4 (owner approved, step 0.6)
+
+- **Key names:** "publishable key (formerly the anon key)" and "secret keys and the legacy service-role key" in section 4, section 8 (intro), S2 and S24; the `user_roles` row now names the `service_role` database role explicitly. Every rule applies to both the new and the legacy keys.
+- **S11 (owner's addition):** `verify_jwt` alone is not enough; every Edge Function verifies the signed-in user inside its own code. Verified in Supabase docs (`guides/functions/auth-headers`, 2026-10-19): "Publishable and secret keys are not JWTs, but the check still accepts them in the `Authorization` header" and "The check alone doesn't authenticate a caller that sends only an API key."
+- **Owner's condition:** nothing removed or weakened. A word-level diff showed that every removed word was replaced by its new wording.
+
+## 2026-10-19 · Dependabot security updates on (owner approved, step 0.6)
+
+- Turned on in the repository settings. **Owner's instruction:** nothing Dependabot proposes is merged without the owner's explicit approval (already required by S30 and 3.7).
+- `.github/dependabot.yml`: weekly version updates for npm and GitHub Actions, grouped into one pull request per ecosystem, with a 7-day cooldown (version updates only). **No `ignore` rules**, because GitHub's docs say they also apply to security updates.
+- Dependabot reads only the default branch, so alerts, security updates and version updates start working when M0 is merged into `main` (today `main` only has `.gitignore`).
+
+## 2026-10-19 · CI workflow (step 0.6)
+
+- `.github/workflows/ci.yml` runs on every pushed branch and every pull request into `main`, on `ubuntu-24.04`, with `permissions: contents: read`, no secrets and no `pull_request_target`.
+  - Job `check`: `npm ci`, `npm run check`, then `npm audit --omit=dev --audit-level=critical`. The audit prints every finding but fails only on critical ones, because the high and moderate runtime findings have no fix within Expo SDK 57 (see the audit entries above). Owner's decision: it stays at critical for now and is raised to high, with documented exceptions, before M9 (tracked in `docs/TODO.md`).
+  - Job `secrets`: gitleaks 8.30.1 (same version as locally) scans the whole history. It is downloaded from the official release and checked against a pinned SHA-256. Its log shows no finding details, because the logs of a public repository are public (owner's decision).
+- Only GitHub's own actions, pinned to full commit SHAs: `actions/checkout` v7.0.1 and `actions/setup-node` v7.0.0. Version 7.1.0 of setup-node was skipped because it was only 11 days old; Dependabot proposes newer versions after the cooldown.
+- No npm cache in CI (setup-node's docs warn about cache poisoning; minutes are free on public repositories).
+- Checked before pushing: `actionlint` 1.7.12 (checksum verified) found no problems, and a fresh clone passed `npm ci`, `npm run check`, the audit gate and the history scan.
+- After the first green run, the jobs `check` and `secrets` become required status checks on `main` (approved by the owner), limited to GitHub Actions as their source.
+
+## 2026-10-19 · `test-renderer` pinned to ~1.2.0 (step 0.6)
+
+- `@testing-library/react-native` 14 uses `test-renderer` as a peer dependency. Version 1.3.x needs React 19.3 or later (through `react-reconciler` 0.34), but Expo SDK 57 uses React 19.2.3, so npm printed a peer-dependency conflict. Version 1.2.x (same major version, MIT, by the testing-library maintainer) uses `react-reconciler` 0.33, which supports React 19.2. The warning is gone and the tests pass. Remove the pin when Expo moves to React 19.3 or later.
+
+## 2026-10-19 · Dev-only `npm audit` review (step 0.6)
+
+- All dependencies: 65 entries (49 high, 16 moderate, 0 critical); runtime only: 61. The 4 dev-only entries are Jest tooling (`jest-expo`, `jest-environment-jsdom`, `jest-watch-typeahead`, `@types/jest`), which is never part of the app. No action; reviewed again at each Expo SDK update.

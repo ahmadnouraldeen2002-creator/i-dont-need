@@ -11,6 +11,7 @@ Repository: https://github.com/ahmadnouraldeen2002-creator/i-dont-need
 3. Tell the owner.
 4. Only then, with the owner's approval, remove it from the git history (GitHub docs: "Removing sensitive data from a repository"). Removing it from history does not make the old value safe again.
 5. If the secret appeared in a GitHub Actions log (public on this repository): delete the log, then rotate the secret (S30).
+6. If the CI job `secrets` fails, follow these steps. Its log shows no details on purpose, because it is public. To see where the secret is, run `npm run secrets:scan:history` on the owner's computer.
 
 ## Revoke keys and tokens
 

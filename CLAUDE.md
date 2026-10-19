@@ -1,10 +1,11 @@
 # CLAUDE.md — Classifieds Marketplace App (`APP_NAME`)
 
-> Version 1.3 · 2026-10-19. This file is the contract between the owner and Claude Code.
+> Version 1.4 · 2026-10-19. This file is the contract between the owner and Claude Code.
 > Do not edit it without the owner's approval. Read sections 0 and 3 before doing anything.
 > Changes in 1.1: the color palette now comes from the Kurdistan flag colors (decision D7 and section 10).
 > Changes in 1.2: the owner's reply "تمام" to a step report now commits that step, uploads it to a private GitHub repository and continues with the next step (section 3.7), protected by rules S26–S30.
 > Changes in 1.3 (approved by the owner): the GitHub repository is **public** by the owner's explicit decision (`docs/DECISIONS.md`). S26, S29, S30 and the related lines in 3.7, 3.8, S28, M0 and section 13 are updated; no security rule was removed or weakened, and nothing is uploaded before the owner's "تمام".
+> Changes in 1.4 (approved by the owner): Supabase key names follow Supabase's current docs (publishable key instead of the legacy anon key, secret keys instead of the legacy service-role key; every rule applies to both the new and the legacy keys), and S11 states that `verify_jwt` alone is not enough. No security rule was removed or weakened.
 
 ---
 
@@ -165,7 +166,7 @@ docs/
 - Validate all external input with Zod (client) **and** DB constraints/RPC checks (server).
 - Named exports (default exports only where a route file requires it). Path alias `@/`. Files <= 300 lines, functions <= 50 lines. No dead or commented-out code. No magic numbers (constants file). No `TODO` without an entry in `docs/TODO.md`.
 - Naming: files `kebab-case`, components `PascalCase`, hooks `useThing`, DB tables/columns `snake_case`.
-- Config: `.env` is git-ignored; `.env.example` is committed. In the app bundle only the Supabase URL, the anon key, the Sentry DSN and the map key may appear (`EXPO_PUBLIC_*`). Real secrets live only in Supabase secrets / EAS secrets.
+- Config: `.env` is git-ignored; `.env.example` is committed. In the app bundle only the Supabase URL, the Supabase publishable key (formerly the anon key), the Sentry DSN and the map key may appear (`EXPO_PUBLIC_*`). Real secrets (including Supabase secret keys and the legacy service-role key) live only in Supabase secrets / EAS secrets.
 - Scripts: `npm run check` (typecheck + lint + format:check + test), `secrets:scan` (staged changes; run by the pre-commit hook), `secrets:scan:history` (whole git history; run by CI), `db:types`, `db:push`, `db:test`.
 - Two Supabase projects: `-dev` (everything until M9) and `-prod` (M10). Never test on prod.
 
@@ -230,7 +231,7 @@ Pick up to 8 → client resize (long edge <= 1280 px, quality ~0.75, JPEG/WebP) 
 | Table | Key columns / rules |
 |---|---|
 | `profiles` | id (= auth user, cascade), display_name, avatar_path, locale, is_banned, accepted_terms_version/at, created_at, last_seen_at. No email/phone here. Clients cannot write `is_banned`. |
-| `user_roles` | user_id, role. Writable only by service role. |
+| `user_roles` | user_id, role. Writable only by the `service_role` database role (used by secret keys and the legacy service-role key). |
 | `locations` | id, parent_id, level (country/governorate/city/neighborhood), country_code, slug, name_ar/fr/en, centroid, sort_order. Country-agnostic; seed Syria first. |
 | `categories` | id, parent_id, slug, name_ar/fr/en, icon, sort_order, is_active. Data, not code (Appendix A). |
 | `listings` | id, seller_id, category_id, title, description, price_amount numeric(18,2), price_currency, price_type, condition, location_id, **approx_point** geography, approx_radius_m (500), status, created_at, updated_at, **expires_at** (created + 90 d), sold_at, **purge_after**, republished_from, search_text (trigger-maintained), flagged. |
@@ -277,10 +278,10 @@ All jobs are idempotent, batched (LIMIT 500), and write to `job_runs`; failures 
 
 ## 8. Security requirements (use these IDs in reviews)
 
-The Supabase **anon key is public**. The database is protected only by RLS and server-side functions. Do not promise "unhackable"; deliver defense in depth and tests.
+The Supabase **publishable key (formerly the anon key) is public**, and so is the legacy anon key while it still exists. The database is protected only by RLS and server-side functions. Do not promise "unhackable"; deliver defense in depth and tests.
 
 - **S1** RLS on every table in `public`, default deny, one policy per operation. Tests prove: guests cannot read non-public rows; user A cannot read/write user B's data; no role escalation.
-- **S2** The service-role key never appears in the app, in git, or in logs. Only Edge Function secrets and CI secrets.
+- **S2** Supabase secret keys (`sb_secret_...`) and the legacy service-role key never appear in the app, in git, or in logs. Only Edge Function secrets and CI secrets.
 - **S3** Writes that need rules (create/update listing, send message, report, block) go through RPCs or tightly constrained policies. Protected columns (status, expires_at, seller_id, role, is_banned, purge_after) are not client-writable (column privileges/triggers).
 - **S4** Public data goes through `public_*` views exposing safe columns only. Views must not bypass RLS by accident: use `security_invoker = true` (or column-level grants) and make the Supabase Advisors show no security-definer-view findings. Tests assert that no API response to another user contains exact location, address note, email or push tokens.
 - **S5** Approximate location rules from section 6 are enforced server-side.
@@ -289,7 +290,7 @@ The Supabase **anon key is public**. The database is protected only by RLS and s
 - **S8** Rate limits and quotas in DB/RPC (Appendix C), with friendly errors. Cap page sizes (<= 50). Add Cloudflare/WAF in front only if scraping is observed (M9).
 - **S9** Storage rules as in section 6; no SVG/HTML uploads; orphan sweep.
 - **S10** Realtime: private channels with authorization so only conversation participants can subscribe; unsubscribe on unmount.
-- **S11** Edge Functions: verify JWT, validate input, minimal CORS, idempotent, timeouts, no secrets in logs.
+- **S11** Edge Functions: verify JWT, validate input, minimal CORS, idempotent, timeouts, no secrets in logs. **`verify_jwt` alone is not enough:** the platform check also accepts the public publishable key (and the legacy anon key), so it never proves that a signed-in user is calling (Supabase docs, checked 2026-10-19: "The check alone doesn't authenticate a caller that sends only an API key"). Every function therefore verifies the caller inside its own code: validate the user's token with Supabase Auth using the method in Supabase's current docs (on 2026-10-19: `withSupabase` with `auth: 'user'` from `@supabase/server`), require a signed-in user, refuse banned users, and use only that verified user id for every permission check (never a user id taken from the request). Functions called only by cron jobs or other server code verify a dedicated secret instead. Tests prove that a call carrying only the publishable key, or no token, is refused.
 - **S12** Separate dev/prod projects and keys; `.env` ignored; secret scanning before every commit and in CI (S28); rotate immediately if anything leaks.
 - **S13** Lockfile committed; `npm audit` in CI; monthly dependency review; no abandoned packages.
 - **S14** Android release hardening: R8/minify and resource shrinking on, `allowBackup=false`, no debuggable release, HTTPS only (no cleartext), validated deep-link schemes, minimal exported components, no WebView bridge to untrusted content.
@@ -302,7 +303,7 @@ The Supabase **anon key is public**. The database is protected only by RLS and s
 - **S21** Force-update gate (`min_supported_version`) and a maintenance switch (`maintenance`) read at launch.
 - **S22** `statement_timeout` for client roles (~8 s); parameterized queries only; trigram index actually used for search (verify with EXPLAIN).
 - **S23** Prohibited-keyword flagging; report flow; optional automated image moderation later.
-- **S24** RLS test suite runs in CI. Before launch run a self-attack session: act as an attacker holding only the anon key and two test users, try every table and RPC, then document results. Walk through OWASP MASVS.
+- **S24** RLS test suite runs in CI. Before launch run a self-attack session: act as an attacker holding only the publishable key (and the legacy anon key while it exists) and two test users, try every table and RPC, then document results. Walk through OWASP MASVS.
 - **S25** `docs/RUNBOOK.md`: how to disable sign-ups, switch on maintenance mode, revoke keys and tokens (including GitHub), what to do if a secret was committed (S28), restore a backup, and who to contact. No secrets in this file.
 - **S26 GitHub account and repository.** The repository is **public** by the owner's explicit, written decision (recorded in `docs/DECISIONS.md` on 2026-10-19 after a review of its contents). Everything committed is visible to everyone, can be copied, and stays in the git history forever even if deleted later. Therefore never commit: secrets or keys (of any environment), real user data, personal email addresses or other personal data, account-security details (for example which protections are or are not enabled on an owner account), or details of a vulnerability before it is fixed; tell the owner those in the chat only. Before every commit, review the staged content as public. No license file or `license` field without the owner's approval (public does not mean free to reuse). The owner's GitHub account has two-factor authentication (passkey or authenticator app), a unique strong password kept in a password manager, and recovery codes stored offline (never in the repo, the chat or a screenshot). In GitHub → Settings → Emails turn on "Keep my email addresses private" and "Block command line pushes that expose my email", and set git `user.email` to the GitHub no-reply address, so the owner's real email never appears in commits. Claude Code walks the owner through these settings at M0, one click at a time. Because the repository is public, the status of these account settings is never written in the repository (not in `docs/RUNBOOK.md` either); `docs/RUNBOOK.md` only describes how to check and change them.
 - **S27 Credentials used to push.** The owner signs in himself, once, in the browser or at the terminal prompt. Preferred: GitHub CLI (`gh auth login`) or Git Credential Manager, which keep the sign-in token in the operating system's credential store. These sign-ins can reach every repository of the account, so use a GitHub account that holds only this project's repositories. If the account holds other repositories, use a fine-grained personal access token limited to this one repository instead (permission Contents: read and write; add Workflows: read and write only when `.github/workflows/` must change; expiry 90 days at most; check the current permission names in GitHub's token settings). Claude Code never asks for a token or key in the chat, never writes one into a file, `.env`, shell history, commit or log, never prints one, and never reads credential files (`~/.ssh`, `~/.config/gh`, `.git-credentials`, the keychain). If a credential leaks: tell the owner at once, revoke it in GitHub, create a new one.
