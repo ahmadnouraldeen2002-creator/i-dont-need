@@ -77,3 +77,18 @@ All are dev-only (not in the app bundle), widely used, actively released, MIT li
 
 - 61 entries from 5 root advisories, all transitive. Only `decode-uri-component` 0.2.2 (GHSA-vcc3-ghjq-m6fr, via `expo-router` → `query-string` 7) is part of the app bundle; the others (`braces`, `node-forge`, `sprintf-js`, `uuid`) are in Expo / Metro / Jest build tooling.
 - No compatible fix: patched versions are ESM-only and do not work with `query-string` 7; `npm audit fix --force` would downgrade Expo to SDK 44. Revisit at every Expo SDK update (including the proposed SDK 58 upgrade).
+- Verified on 2026-10-19 (step 0.5): `decode-uri-component@0.5.0` has `"type": "module"`, while `query-string@7.1.3` loads it with `require()` and asks for `^0.2.2`. The owner asked for a re-check before M3 even if the Expo upgrade is delayed (`docs/TODO.md`).
+
+## 2026-10-19 · Supabase publishable key instead of the legacy anon key (step 0.5)
+
+- **Decision:** the app will use the Supabase **publishable key** (`sb_publishable_...`) in `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Server-side code will use **secret keys** (`sb_secret_...`), only from Supabase, EAS or GitHub Actions secrets, never in the app or in git.
+- **Why:** Supabase docs (supabase.com/docs/guides/api/api-keys, checked 2026-10-19): the legacy `anon` and `service_role` keys are being deprecated by the end of 2026. The publishable key replaces the anon key for clients: it is safe to ship in an app, and what it can reach is limited by RLS, exactly as CLAUDE.md assumes for the anon key.
+- **Proposed CLAUDE.md edit (awaiting the owner):** in section 4, section 8 (intro), S2 and S12, "anon key" → "publishable key (formerly the anon key)" and "service-role key" → "secret keys and the legacy service-role key". No rule is weakened: every rule for the old keys applies to the new ones.
+
+## 2026-10-19 · Folder structure (step 0.5)
+
+- The folders of CLAUDE.md section 4 that are needed before M2 exist now under `src/`, each with a short `README.md` saying what belongs there. Feature folders are created with their feature. `supabase/` is created by the Supabase CLI at step 0.7.
+
+## 2026-10-19 · Expo Go for SDK 58 (update to the SDK 57 decision)
+
+- Expo announced that the next Expo Go in the stores will support only SDK 58. When it reaches the Play Store, it will no longer open this SDK 57 project. Until the upgrade, the owner installs the Expo Go build for SDK 57 from expo.dev/go. Tracked in `docs/TODO.md`.
