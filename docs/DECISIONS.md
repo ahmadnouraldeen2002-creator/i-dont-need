@@ -51,3 +51,16 @@ This repository is public: nothing in this file may contain secrets, personal da
 ## 2026-10-19 · Known `npm audit` findings in the Expo toolchain
 
 - 29 publicly known advisories (11 moderate, 18 high), all in third-party packages inside the Expo / React Native / Metro build tooling, not in this project's code. None is fixable without changing the Expo SDK; `npm audit fix --force` would break SDK alignment. Re-check on each SDK patch update.
+
+## 2026-10-19 · Dev tooling for `npm run check` (step 0.3)
+
+All are dev-only (not in the app bundle), widely used, actively released, MIT licensed. Versions chosen by `npx expo install` where Expo pins them.
+
+- `eslint` 9 + `eslint-config-expo` 57: linting; Expo's official config for this SDK (ESLint 9 is the version it supports).
+- `prettier` 3 + `eslint-config-prettier`: formatting, and turns off lint rules that fight Prettier.
+- `jest` 29 + `jest-expo` 57: unit tests with Expo's official preset.
+- `@testing-library/react-native` 14 (note: `render` is async in v14, always `await` it) + `@types/jest`.
+- `tsconfig.json` sets `"types": ["jest"]` because TypeScript 6 no longer loads all `@types` packages automatically.
+- Lint runs with `--max-warnings 0`; `no-explicit-any`, `ban-ts-comment` and `no-console` (except warn/error) are errors.
+- `CLAUDE.md` is excluded from Prettier so it is never reformatted without the owner's approval.
+- Line endings are LF in the repository (`.gitattributes`).
